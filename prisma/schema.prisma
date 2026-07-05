@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Provider {
+  GOOGLE
+  GITHUB
+  EMAIL
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  provider  Provider @default(EMAIL)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks     Task[]
+  sessions  PomodoroSession[]
+  settings  Settings?
+}
+
+model Label {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#6366f1")
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User?
+  tasks     Task[]
+}
+
+model Task {
+  id                 String   @id @default(cuid())
+  title              String
+  description        String?
+  estimatedPomodoros Int      @default(1)
+  completedPomodoros Int      @default(0)
+  priority           Int      @default(0)
+  dueDate            DateTime?
+  completed          Boolean  @default(false)
+  userId             String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  labels    Label[]
+  sessions  PomodoroSession[]
+}
+
+model PomodoroSession {
+  id         String   @id @default(cuid())
+  taskId     String?
+  userId     String
+  type       String   @default("focus")
+  duration   Int
+  completed  Boolean  @default(false)
+  startedAt  DateTime
+  endedAt    DateTime?
+  createdAt  DateTime @default(now())
+
+  task      Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Settings {
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  focusDuration     Int     @default(25)
+  shortBreak        Int     @default(5)
+  longBreak         Int     @default(15)
+  longBreakInterval Int     @default(4)
+  autoStartBreaks   Boolean @default(false)
+  autoStartPomodoros Boolean @default(false)
+  soundEnabled      Boolean @default(true)
+  notifications     Boolean @default(true)
+  vibrationEnabled  Boolean @default(true)
+  theme             String  @default("system")
+  accentColor       String  @default("#6366f1")
+  language          String  @default("en")
+  timeFormat        String  @default("24h")
+  animations        Boolean @default(true)
+  reducedMotion     Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Statistics {
+  id                 String   @id @default(cuid())
+  userId             String
+  date               DateTime
+  totalFocusTime     Int      @default(0)
+  completedSessions  Int      @default(0)
+  tasksCompleted     Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String
+  name        String
+  description String?
+  unlockedAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+}
